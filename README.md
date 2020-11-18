@@ -1,4 +1,4 @@
-#What it does
+# What it does
 
 1. Reads the k8s config.
 1. For each context, asks if it should be deleted (along with its associated cluster and user).
@@ -7,13 +7,13 @@
    1. Makes a backup of the original k8s config (optional).
    1. Writes the updated k8s config.
    
-#Build
+# Build
 
 ```
 mvn clean package
 ```
 
-#Run
+# Run
 
 Run with the default `<user home dir>/.kube/config`:
 ```
