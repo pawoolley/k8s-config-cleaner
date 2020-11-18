@@ -1,4 +1,4 @@
-package com.pwoolley;
+package com.pawoolley;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -172,22 +172,22 @@ public class Main {
         // Get the name of the config file to read
         final Path configFile = getConfigFile(args);
 
-        // Create a backup
-        createConfigFileBackup(configFile);
-
         // Read the config
         ObjectNode config = (ObjectNode) MAPPER.readTree(configFile.toUri().toURL());
 
         // Process the config
-        process(config);
+        if (process(config)) {
 
-        // Output the modified config
-        System.out.println();
-        System.out.println("Final config is:\n" + MAPPER.writeValueAsString(config));
-        System.out.println();
+            // Output the modified config
+            System.out.println();
+            System.out.println("Final config is:");
+            System.out.println("---");
+            System.out.println(MAPPER.writeValueAsString(config));
+            System.out.println();
 
-        // Write back the config
-        writeConfigFile(configFile, config);
+            // Write back the config
+            writeConfigFile(configFile, config);
+        }
     }
 
     /**
@@ -208,7 +208,7 @@ public class Main {
      */
     private void createConfigFileBackup(Path configFile) throws IOException {
         String configFilename = configFile.toAbsolutePath().toString();
-        boolean createBackup = yesOrNo("Create backup of '" + configFilename + "'?");
+        boolean createBackup = yesOrNo("Create backup of '" + configFilename + "' first?");
         if (createBackup) {
             Path backup = Paths.get(configFilename + ".backup." + DATE_FORMAT.format(LocalDateTime.now()));
             Files.copy(configFile, backup, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
@@ -330,18 +330,27 @@ public class Main {
      * Process the config to remove unwanted contexts.
      *
      * @param config the config.
+     * @return true if changes were made, false otherwise.
      * @throws IOException if something goes wrong.
      */
-    private void process(final ObjectNode config) throws IOException {
+    private boolean process(final ObjectNode config) throws IOException {
 
         // Get the contexts to delete
         List<ContextInfo> deletedContexts = deleteContexts(config);
+
+        // Only continue if there are contexts to delete.
+        if (CollectionUtils.isEmpty(deletedContexts)) {
+            System.out.println("No changes made");
+            return false;
+        }
 
         // Delete clusters associated with the deleted contexts.
         deleteClusters(config, deletedContexts);
 
         // Delete users associated with the deleted contexts.
         deleteUsers(config, deletedContexts);
+
+        return true;
     }
 
     /**
@@ -433,9 +442,12 @@ public class Main {
         String configFilename = configFile.toAbsolutePath().toString();
         boolean writeConfig = yesOrNo("Write updated config back to '" + configFilename + "'?", false);
         if (writeConfig) {
+            // Create a backup of the original config first?
+            createConfigFileBackup(configFile);
             try (FileOutputStream fos = new FileOutputStream(configFile.toAbsolutePath().toString())) {
                 MAPPER.writeValue(fos, config);
             }
+            System.out.println("Changes written to " + configFilename);
         }
     }
 
